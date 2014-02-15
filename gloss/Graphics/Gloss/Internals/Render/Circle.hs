@@ -116,14 +116,27 @@ renderArcLine (F# posX) (F# posY) steps (F# rad) a1 a2
 
 
 -- | Render an arc with a given thickness as a triangle strip
+
 renderArcStrip :: Float -> Float -> Int -> Float -> Float -> Float -> Float -> IO ()
-renderArcStrip (F# posX) (F# posY) steps r a1 a2 width
+renderArcStrip posX posY steps r a1 a2 width
+ = let  t1 = normaliseAngle $ degToRad a1
+        t2 = normaliseAngle $ degToRad a2
+   in 
+     if t1 <= t2
+     then renderArcStrip' posX posY steps r t1 t2 width
+     else 
+       let (mN,eN) = decodeFloat (360::Float)
+           t0 = normaliseAngle $ degToRad $ encodeFloat (mN-1) eN
+       in 
+           renderArcStrip' posX posY steps r t1 t0 width >>
+           renderArcStrip' posX posY steps r 0 t2 width
+{-# INLINE renderArcStrip #-}
+
+renderArcStrip' :: Float -> Float -> Int -> Float -> Float -> Float -> Float -> IO ()
+renderArcStrip' (F# posX) (F# posY) steps r a1 a2 width
  = let	n		= fromIntegral steps
         tStep           = (2 * pi) / n
-
-        t1              = normaliseAngle $ degToRad a1
-        t2              = normaliseAngle $ degToRad a2
-        (tStart, tStop) = if t1 <= t2 then (t1, t2) else (t2, t1)
+        (tStart, tStop) = (a1, a2)
         tDiff           = tStop - tStart
         tMid            = tStart + tDiff / 2
 
@@ -160,7 +173,7 @@ renderArcStrip (F# posX) (F# posY) steps r a1 a2 width
                         -- end vectors
                         addPointOnCircle posX posY r1' tStop'
                         addPointOnCircle posX posY r2' tStop'
-{-# INLINE renderArcStrip #-}
+{-# INLINE renderArcStrip' #-}
 
 
 -- Step functions -------------------------------------------------------------
